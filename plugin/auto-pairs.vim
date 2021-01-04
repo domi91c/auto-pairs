@@ -169,11 +169,11 @@ endf
 
 " returns [orig, close, text_after_close]
 func! s:matchbegin(text, close)
-    let m = matchstr(a:text, '^\V'.a:close)
-    if m == ""
-      return []
-    end
-    return [a:text, m, strpart(a:text, len(m), len(a:text)-len(m))]
+  let m = matchstr(a:text, '^\V'.a:close)
+  if m == ""
+    return []
+  end
+  return [a:text, m, strpart(a:text, len(m), len(a:text)-len(m))]
 endf
 
 " add or delete pairs base on g:AutoPairs
@@ -314,14 +314,20 @@ func! AutoPairsDelete()
         if a[0] == ' '
           return "\<BS>\<DELETE>"
         else
-          return "\<BS>"
+          return (&indentexpr isnot '' ? &indentkeys : &cinkeys) =~? '!\^F' &&
+                \ &backspace =~? '.*eol\&.*start\&.*indent\&' &&
+                \ !search('\S','nbW',line('.')) ? (col('.') != 1 ? "\<C-U>" : "") .
+                \ "\<bs>" . (getline(line('.')-1) =~ '\S' ? "" : "\<C-F>") : "\<bs>"
         end
       end
       return s:backspace(b).s:delete(a)
     end
   endfor
 
-  return "\<BS>"
+  return (&indentexpr isnot '' ? &indentkeys : &cinkeys) =~? '!\^F' &&
+        \ &backspace =~? '.*eol\&.*start\&.*indent\&' &&
+        \ !search('\S','nbW',line('.')) ? (col('.') != 1 ? "\<C-U>" : "") .
+        \ "\<bs>" . (getline(line('.')-1) =~ '\S' ? "" : "\<C-F>") : "\<bs>"
   " delete the pair foo[]| <BS> to foo
   for [open, close, opt] in b:AutoPairsList
     let m = s:matchend(before, '\V'.open.'\v\s*'.'\V'.close.'\v$')
@@ -329,7 +335,10 @@ func! AutoPairsDelete()
       return s:backspace(m[2])
     end
   endfor
-  return "\<BS>"
+  return (&indentexpr isnot '' ? &indentkeys : &cinkeys) =~? '!\^F' &&
+        \ &backspace =~? '.*eol\&.*start\&.*indent\&' &&
+        \ !search('\S','nbW',line('.')) ? (col('.') != 1 ? "\<C-U>" : "") .
+        \ "\<bs>" . (getline(line('.')-1) =~ '\S' ? "" : "\<C-F>") : "\<bs>"
 endf
 
 
@@ -412,6 +421,8 @@ func! AutoPairsReturn()
       " coffeescript forbid indent new line
       if &filetype == 'coffeescript' || &filetype == 'coffee'
         return "\<ESC>".cmd."k==o"
+      elseif &filetype == 'python'
+        return "\<BS>\<BS>\<ESC>".cmd."O\<BS>"
       else
         return "\<ESC>".cmd."=ko"
       endif
